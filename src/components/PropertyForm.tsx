@@ -7,22 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, DollarSign, Calendar, Home } from "lucide-react";
+import { MapPin, Home, MessageCircle } from "lucide-react";
 
 const PropertyForm = ({ onSubmit }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    purchasePrice: "",
-    purchaseDate: "",
     propertyType: "",
     squareFootage: "",
     yearBuilt: "",
-    landValue: "",
-    buildingValue: "",
     bedrooms: "",
     bathrooms: "",
     lotSize: "",
@@ -30,11 +23,10 @@ const PropertyForm = ({ onSubmit }) => {
   });
 
   const [missingFields, setMissingFields] = useState([]);
+  const [showTaxChat, setShowTaxChat] = useState(false);
+  const [taxData, setTaxData] = useState(null);
 
-  const requiredFields = [
-    "address", "city", "state", "zipCode", "purchasePrice", 
-    "purchaseDate", "propertyType", "squareFootage", "yearBuilt"
-  ];
+  const requiredFields = ["address", "propertyType", "squareFootage", "yearBuilt"];
 
   const validateForm = () => {
     const missing = requiredFields.filter(field => !formData[field]);
@@ -49,7 +41,7 @@ const PropertyForm = ({ onSubmit }) => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleBasicFormSubmit = (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -61,17 +53,30 @@ const PropertyForm = ({ onSubmit }) => {
       return;
     }
 
-    console.log("Form validation passed, submitting:", formData);
-    onSubmit(formData);
-    
+    setShowTaxChat(true);
     toast({
-      title: "Property Data Saved",
-      description: "Property information has been saved successfully. Proceeding to cost analysis.",
+      title: "Property Details Saved",
+      description: "Now let's gather some tax information through our chat assistant.",
     });
   };
 
+  const handleTaxDataComplete = (data) => {
+    setTaxData(data);
+    const completeData = { ...formData, ...data };
+    onSubmit(completeData);
+    
+    toast({
+      title: "All Information Collected",
+      description: "Property and tax information saved successfully. Proceeding to analysis.",
+    });
+  };
+
+  if (showTaxChat) {
+    return <TaxChatbot onComplete={handleTaxDataComplete} propertyData={formData} />;
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleBasicFormSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Property Address Section */}
         <Card>
@@ -81,116 +86,21 @@ const PropertyForm = ({ onSubmit }) => {
               Property Address
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div>
-              <Label htmlFor="address">Street Address *</Label>
+              <Label htmlFor="address">Full Property Address *</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => handleInputChange("address", e.target.value)}
-                placeholder="123 Main Street"
+                placeholder="123 Main Street, City, State 12345"
                 className={missingFields.includes("address") ? "border-red-500" : ""}
               />
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange("city", e.target.value)}
-                  placeholder="City"
-                  className={missingFields.includes("city") ? "border-red-500" : ""}
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">State *</Label>
-                <Select value={formData.state} onValueChange={(value) => handleInputChange("state", value)}>
-                  <SelectTrigger className={missingFields.includes("state") ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="AL">Alabama</SelectItem>
-                    <SelectItem value="CA">California</SelectItem>
-                    <SelectItem value="FL">Florida</SelectItem>
-                    <SelectItem value="NY">New York</SelectItem>
-                    <SelectItem value="TX">Texas</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="zipCode">ZIP Code *</Label>
-              <Input
-                id="zipCode"
-                value={formData.zipCode}
-                onChange={(e) => handleInputChange("zipCode", e.target.value)}
-                placeholder="12345"
-                className={missingFields.includes("zipCode") ? "border-red-500" : ""}
-              />
-            </div>
           </CardContent>
         </Card>
 
-        {/* Financial Information Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Financial Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="purchasePrice">Purchase Price *</Label>
-              <Input
-                id="purchasePrice"
-                type="number"
-                value={formData.purchasePrice}
-                onChange={(e) => handleInputChange("purchasePrice", e.target.value)}
-                placeholder="500000"
-                className={missingFields.includes("purchasePrice") ? "border-red-500" : ""}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="purchaseDate">Purchase Date *</Label>
-              <Input
-                id="purchaseDate"
-                type="date"
-                value={formData.purchaseDate}
-                onChange={(e) => handleInputChange("purchaseDate", e.target.value)}
-                className={missingFields.includes("purchaseDate") ? "border-red-500" : ""}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="landValue">Land Value</Label>
-              <Input
-                id="landValue"
-                type="number"
-                value={formData.landValue}
-                onChange={(e) => handleInputChange("landValue", e.target.value)}
-                placeholder="150000"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="buildingValue">Building Value</Label>
-              <Input
-                id="buildingValue"
-                type="number"
-                value={formData.buildingValue}
-                onChange={(e) => handleInputChange("buildingValue", e.target.value)}
-                placeholder="350000"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Property Characteristics Section */}
+        {/* Property Details Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -238,7 +148,15 @@ const PropertyForm = ({ onSubmit }) => {
                 />
               </div>
             </div>
+          </CardContent>
+        </Card>
 
+        {/* Optional Property Features */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Additional Features (Optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="bedrooms">Bedrooms</Label>
@@ -276,22 +194,19 @@ const PropertyForm = ({ onSubmit }) => {
           </CardContent>
         </Card>
 
-        {/* Additional Information Section */}
+        {/* Description */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Additional Information
-            </CardTitle>
+            <CardTitle>Property Description</CardTitle>
           </CardHeader>
           <CardContent>
             <div>
-              <Label htmlFor="description">Property Description</Label>
+              <Label htmlFor="description">Additional Details</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => handleInputChange("description", e.target.value)}
-                placeholder="Additional details about the property..."
+                placeholder="Any additional details about the property..."
                 rows={4}
               />
             </div>
@@ -313,10 +228,14 @@ const PropertyForm = ({ onSubmit }) => {
       )}
 
       <Button type="submit" className="w-full" size="lg">
-        Proceed to Cost Analysis
+        <MessageCircle className="h-4 w-4 mr-2" />
+        Continue to Tax Questions
       </Button>
     </form>
   );
 };
+
+// Import TaxChatbot component
+import TaxChatbot from "./TaxChatbot";
 
 export default PropertyForm;
