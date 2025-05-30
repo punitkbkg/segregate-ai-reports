@@ -6,10 +6,10 @@ import { generateQuestions } from "./TaxChatbot/questionsGenerator";
 import ChatMessage from "./TaxChatbot/ChatMessage";
 import TypingIndicator from "./TaxChatbot/TypingIndicator";
 import ChatInput from "./TaxChatbot/ChatInput";
-import { TaxData, Question, Message, PropertyType } from "./TaxChatbot/types";
+import { TaxData, TakeoffsData, Question, Message, PropertyType } from "./TaxChatbot/types";
 
 interface TaxChatbotProps {
-  onComplete: (data: TaxData) => void;
+  onComplete: (data: TaxData & TakeoffsData) => void;
   propertyData: { propertyType?: string };
 }
 
@@ -17,10 +17,11 @@ const TaxChatbot = ({ onComplete, propertyData }: TaxChatbotProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
-  const [taxData, setTaxData] = useState<TaxData>({});
+  const [collectedData, setCollectedData] = useState<TaxData & TakeoffsData>({});
   const [inputType, setInputType] = useState("text");
   const [selectOptions, setSelectOptions] = useState<string[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentSection, setCurrentSection] = useState<'tax' | 'takeoffs'>('tax');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize questions when component mounts
@@ -72,10 +73,15 @@ const TaxChatbot = ({ onComplete, propertyData }: TaxChatbotProps) => {
     
     // Store the response if it has a field
     if (currentQ?.field) {
-      setTaxData(prev => ({
+      setCollectedData(prev => ({
         ...prev,
         [currentQ.field!]: response
       }));
+    }
+
+    // Update current section
+    if (currentQ?.section) {
+      setCurrentSection(currentQ.section);
     }
 
     // Move to next question
@@ -90,7 +96,7 @@ const TaxChatbot = ({ onComplete, propertyData }: TaxChatbotProps) => {
     // Skip questions based on conditions
     while (nextIndex < questions.length) {
       const nextQ = questions[nextIndex];
-      if (nextQ?.condition && !nextQ.condition(taxData)) {
+      if (nextQ?.condition && !nextQ.condition(collectedData)) {
         nextIndex++;
       } else {
         break;
@@ -100,7 +106,7 @@ const TaxChatbot = ({ onComplete, propertyData }: TaxChatbotProps) => {
     if (nextIndex >= questions.length) {
       // Complete the chat
       setTimeout(() => {
-        onComplete(taxData);
+        onComplete(collectedData);
       }, 1000);
       return;
     }
@@ -116,22 +122,31 @@ const TaxChatbot = ({ onComplete, propertyData }: TaxChatbotProps) => {
   };
 
   const showSummary = () => {
-    const summaryText = `Here's what we collected:
-• Depreciable Basis: $${parseInt(taxData.depreciableBasis || '0').toLocaleString()}
-• Purchase Price: $${parseInt(taxData.purchasePrice || '0').toLocaleString()}
-• Placed in Service: ${taxData.placedInServiceDate || 'Not specified'}
-• Property Use: ${taxData.propertyUse || 'Not specified'}
-• Improvements: $${parseInt(taxData.improvementCosts || '0').toLocaleString()}
-• Acquisition Method: ${taxData.acquisitionMethod || 'Not specified'}
-• Tax Bracket: ${taxData.taxBracket || 'Not specified'}
+    const taxSummary = `Tax Information Collected:
+• Depreciable Basis: $${parseInt(collectedData.depreciableBasis || '0').toLocaleString()}
+• Purchase Price: $${parseInt(collectedData.purchasePrice || '0').toLocaleString()}
+• Placed in Service: ${collectedData.placedInServiceDate || 'Not specified'}
+• Property Use: ${collectedData.propertyUse || 'Not specified'}
+• Improvements: $${parseInt(collectedData.improvementCosts || '0').toLocaleString()}
+• Acquisition Method: ${collectedData.acquisitionMethod || 'Not specified'}
+• Tax Bracket: ${collectedData.taxBracket || 'Not specified'}
 
-Everything looks good! Click 'Complete' to proceed with your cost segregation analysis.`;
+Property Takeoffs Information:
+• Foundation: ${collectedData.foundationMaterial || 'Not specified'}
+• Wall Construction: ${collectedData.wallMaterial || 'Not specified'}
+• Roofing: ${collectedData.roofMaterial || 'Not specified'}
+• HVAC System: ${collectedData.hvacSystemType || 'Not specified'}
+• Electrical: ${collectedData.electricalSystemType || 'Not specified'}
+• Flooring: ${collectedData.flooringTypes || 'Not specified'}
+• Lighting: ${collectedData.lightingTypes || 'Not specified'}
 
-    addBotMessage(summaryText, "completion");
+All information has been collected successfully! Your comprehensive cost segregation analysis is ready to proceed.`;
+
+    addBotMessage(taxSummary, "completion");
   };
 
   const handleComplete = () => {
-    onComplete(taxData);
+    onComplete(collectedData);
   };
 
   return (
@@ -139,7 +154,7 @@ Everything looks good! Click 'Complete' to proceed with your cost segregation an
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5" />
-          Tax Information Assistant
+          {currentSection === 'tax' ? 'Tax Information Assistant' : 'Property Takeoffs Assistant'}
         </CardTitle>
       </CardHeader>
       <CardContent>
