@@ -6,6 +6,7 @@ import { generateQuestions } from "./TaxChatbot/questionsGenerator";
 import ChatMessage from "./TaxChatbot/ChatMessage";
 import TypingIndicator from "./TaxChatbot/TypingIndicator";
 import ChatInput from "./TaxChatbot/ChatInput";
+import CostAllocationReport from "./CostAllocationReport";
 import { TaxData, TakeoffsData, Question, Message, PropertyType } from "./TaxChatbot/types";
 
 interface TaxChatbotProps {
@@ -22,6 +23,8 @@ const TaxChatbot = ({ onComplete, propertyData }: TaxChatbotProps) => {
   const [selectOptions, setSelectOptions] = useState<string[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentSection, setCurrentSection] = useState<'tax' | 'takeoffs'>('tax');
+  const [chatCompleted, setChatCompleted] = useState(false);
+  const [reportData, setReportData] = useState(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize questions when component mounts
@@ -104,10 +107,9 @@ const TaxChatbot = ({ onComplete, propertyData }: TaxChatbotProps) => {
     }
 
     if (nextIndex >= questions.length) {
-      // Complete the chat
-      setTimeout(() => {
-        onComplete(collectedData);
-      }, 1000);
+      // Complete the chat and show cost allocation report
+      setChatCompleted(true);
+      showSummary();
       return;
     }
 
@@ -122,25 +124,21 @@ const TaxChatbot = ({ onComplete, propertyData }: TaxChatbotProps) => {
   };
 
   const showSummary = () => {
-    const taxSummary = `Tax Information Collected:
+    const taxSummary = `Perfect! I've collected all the necessary information for your cost segregation analysis:
+
+**Tax Information:**
 • Depreciable Basis: $${parseInt(collectedData.depreciableBasis || '0').toLocaleString()}
 • Purchase Price: $${parseInt(collectedData.purchasePrice || '0').toLocaleString()}
-• Placed in Service: ${collectedData.placedInServiceDate || 'Not specified'}
 • Property Use: ${collectedData.propertyUse || 'Not specified'}
-• Improvements: $${parseInt(collectedData.improvementCosts || '0').toLocaleString()}
-• Acquisition Method: ${collectedData.acquisitionMethod || 'Not specified'}
 • Tax Bracket: ${collectedData.taxBracket || 'Not specified'}
 
-Property Takeoffs Information:
+**Property Takeoffs:**
 • Foundation: ${collectedData.foundationMaterial || 'Not specified'}
 • Wall Construction: ${collectedData.wallMaterial || 'Not specified'}
-• Roofing: ${collectedData.roofMaterial || 'Not specified'}
 • HVAC System: ${collectedData.hvacSystemType || 'Not specified'}
 • Electrical: ${collectedData.electricalSystemType || 'Not specified'}
-• Flooring: ${collectedData.flooringTypes || 'Not specified'}
-• Lighting: ${collectedData.lightingTypes || 'Not specified'}
 
-All information has been collected successfully! Your comprehensive cost segregation analysis is ready to proceed.`;
+Now you can generate a detailed cost allocation report based on this information!`;
 
     addBotMessage(taxSummary, "completion");
   };
@@ -148,6 +146,42 @@ All information has been collected successfully! Your comprehensive cost segrega
   const handleComplete = () => {
     onComplete(collectedData);
   };
+
+  const handleReportGenerated = (data: any) => {
+    setReportData(data);
+    // Automatically pass the complete data including report to parent
+    onComplete({ ...collectedData, reportData: data });
+  };
+
+  if (chatCompleted) {
+    return (
+      <div className="space-y-6">
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5" />
+              Information Collection Complete
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 max-h-96 overflow-y-auto mb-4 p-4 bg-gray-50 rounded-lg">
+              {messages.map((message, index) => (
+                <ChatMessage key={index} message={message} />
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <CostAllocationReport
+          taxData={collectedData}
+          takeoffsData={collectedData}
+          propertyData={propertyData}
+          onReportGenerated={handleReportGenerated}
+        />
+      </div>
+    );
+  }
 
   return (
     <Card className="max-w-4xl mx-auto">
