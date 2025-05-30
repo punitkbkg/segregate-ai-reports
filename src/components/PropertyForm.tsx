@@ -19,7 +19,11 @@ const PropertyForm = ({ onSubmit }) => {
     bedrooms: "",
     bathrooms: "",
     lotSize: "",
-    description: ""
+    description: "",
+    // Additional dynamic fields
+    additionalFeature1: "",
+    additionalFeature2: "",
+    additionalFeature3: ""
   });
 
   const [missingFields, setMissingFields] = useState([]);
@@ -27,6 +31,42 @@ const PropertyForm = ({ onSubmit }) => {
   const [taxData, setTaxData] = useState(null);
 
   const requiredFields = ["address", "propertyType", "squareFootage", "yearBuilt"];
+
+  // Dynamic additional features based on property type
+  const getAdditionalFeatures = (propertyType) => {
+    switch (propertyType) {
+      case "residential":
+        return [
+          { key: "bedrooms", label: "Bedrooms", type: "number", placeholder: "3" },
+          { key: "bathrooms", label: "Bathrooms", type: "number", step: "0.5", placeholder: "2.5" },
+          { key: "garageSpaces", label: "Garage Spaces", type: "number", placeholder: "2" }
+        ];
+      case "commercial":
+        return [
+          { key: "floors", label: "Number of Floors", type: "number", placeholder: "3" },
+          { key: "parkingSpaces", label: "Parking Spaces", type: "number", placeholder: "50" },
+          { key: "elevators", label: "Number of Elevators", type: "number", placeholder: "2" }
+        ];
+      case "industrial":
+        return [
+          { key: "ceilingHeight", label: "Ceiling Height (ft)", type: "number", placeholder: "24" },
+          { key: "loadingDocks", label: "Loading Docks", type: "number", placeholder: "4" },
+          { key: "craneCapacity", label: "Crane Capacity (tons)", type: "number", placeholder: "10" }
+        ];
+      case "mixed-use":
+        return [
+          { key: "commercialUnits", label: "Commercial Units", type: "number", placeholder: "5" },
+          { key: "residentialUnits", label: "Residential Units", type: "number", placeholder: "20" },
+          { key: "floors", label: "Number of Floors", type: "number", placeholder: "4" }
+        ];
+      default:
+        return [
+          { key: "bedrooms", label: "Bedrooms", type: "number", placeholder: "3" },
+          { key: "bathrooms", label: "Bathrooms", type: "number", step: "0.5", placeholder: "2.5" },
+          { key: "lotSize", label: "Lot Size (sq ft)", type: "number", placeholder: "8000" }
+        ];
+    }
+  };
 
   const validateForm = () => {
     const missing = requiredFields.filter(field => !formData[field]);
@@ -74,6 +114,8 @@ const PropertyForm = ({ onSubmit }) => {
   if (showTaxChat) {
     return <TaxChatbot onComplete={handleTaxDataComplete} propertyData={formData} />;
   }
+
+  const additionalFeatures = getAdditionalFeatures(formData.propertyType);
 
   return (
     <form onSubmit={handleBasicFormSubmit} className="space-y-6">
@@ -151,48 +193,64 @@ const PropertyForm = ({ onSubmit }) => {
           </CardContent>
         </Card>
 
-        {/* Optional Property Features */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Features (Optional)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="bedrooms">Bedrooms</Label>
-                <Input
-                  id="bedrooms"
-                  type="number"
-                  value={formData.bedrooms}
-                  onChange={(e) => handleInputChange("bedrooms", e.target.value)}
-                  placeholder="3"
-                />
+        {/* Dynamic Additional Features */}
+        {formData.propertyType && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {formData.propertyType === "residential" && "Property Features"}
+                {formData.propertyType === "commercial" && "Building Specifications"}
+                {formData.propertyType === "industrial" && "Facility Details"}
+                {formData.propertyType === "mixed-use" && "Unit Configuration"}
+                {!["residential", "commercial", "industrial", "mixed-use"].includes(formData.propertyType) && "Additional Features"}
+                {" (Optional)"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {additionalFeatures.slice(0, 2).map((feature) => (
+                  <div key={feature.key}>
+                    <Label htmlFor={feature.key}>{feature.label}</Label>
+                    <Input
+                      id={feature.key}
+                      type={feature.type}
+                      step={feature.step}
+                      value={formData[feature.key] || ""}
+                      onChange={(e) => handleInputChange(feature.key, e.target.value)}
+                      placeholder={feature.placeholder}
+                    />
+                  </div>
+                ))}
               </div>
-              <div>
-                <Label htmlFor="bathrooms">Bathrooms</Label>
-                <Input
-                  id="bathrooms"
-                  type="number"
-                  step="0.5"
-                  value={formData.bathrooms}
-                  onChange={(e) => handleInputChange("bathrooms", e.target.value)}
-                  placeholder="2.5"
-                />
-              </div>
-            </div>
 
-            <div>
-              <Label htmlFor="lotSize">Lot Size (sq ft)</Label>
-              <Input
-                id="lotSize"
-                type="number"
-                value={formData.lotSize}
-                onChange={(e) => handleInputChange("lotSize", e.target.value)}
-                placeholder="8000"
-              />
-            </div>
-          </CardContent>
-        </Card>
+              {additionalFeatures[2] && (
+                <div>
+                  <Label htmlFor={additionalFeatures[2].key}>{additionalFeatures[2].label}</Label>
+                  <Input
+                    id={additionalFeatures[2].key}
+                    type={additionalFeatures[2].type}
+                    step={additionalFeatures[2].step}
+                    value={formData[additionalFeatures[2].key] || ""}
+                    onChange={(e) => handleInputChange(additionalFeatures[2].key, e.target.value)}
+                    placeholder={additionalFeatures[2].placeholder}
+                  />
+                </div>
+              )}
+
+              {/* Lot Size for all property types */}
+              <div>
+                <Label htmlFor="lotSize">Lot Size (sq ft)</Label>
+                <Input
+                  id="lotSize"
+                  type="number"
+                  value={formData.lotSize}
+                  onChange={(e) => handleInputChange("lotSize", e.target.value)}
+                  placeholder="8000"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Description */}
         <Card>
